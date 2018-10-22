@@ -1,0 +1,16 @@
+---
+- name: Download Kibana Binary Package
+  get_url:
+    url: https://artifacts.elastic.co/downloads/kibana/kibana-6.4.2-amd64.deb
+    dest: /tmp/kibana-6.4.2.deb
+
+- name: Install Kibana
+  apt:
+    deb: /tmp/kibana-6.4.2.deb
+  become: yes
+
+- name: Make sure kibana service is started
+  systemd:
+    name: kibana
+    state: started
+  become: yes
