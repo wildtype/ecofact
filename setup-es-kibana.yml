@@ -1,6 +1,53 @@
 ---
+- name: Create Elasticsearch-Kibana Instance
+  hosts: localhost
+  connection: local
+
+  tasks:
+    - name: Create Instance
+      gce:
+        instance_names: elasticsearch-kibana-1
+        zone: asia-southeast1-a
+        machine_type: g1-small
+        image: ubuntu-1804
+        state: present
+        tags:
+          - bastion
+          - sshable
+        network: wildtype
+        subnetwork: wildtype-application
+      register: created_instance
+
+    - name: Wait for SSH for instances
+      wait_for:
+        delay: 1
+        host: "{{ item.public_ip }}"
+        port: 22
+        state: started
+        timeout: 30
+      with_items: "{{ created_instance.instance_data }}"
+
+    - name: Save host
+      add_host:
+        hostname: "{{ item.public_ip }}"
+        groupname: elasticsearch_kibana
+      with_items: "{{ created_instance.instance_data }}"
+        
+- name: pepare new host
+  hosts: elasticsearch_kibana
+  gather_facts: no
+  become: yes
+
+  # ansible needs /usr/bin/python in target hosts to gather facts
+  # meanwhile ubuntu 1804 only have python3 by default
+  # so far this is the only hacks that worked :(
+
+  tasks:
+    - name: Install python2 
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+
 - name: Setup elasticsearch and kibana
-  hosts: elasticsearch
+  hosts: elasticsearch_kibana
 
   roles:
     - role: ansiblebit.oracle-java
